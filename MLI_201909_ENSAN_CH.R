@@ -1,6 +1,6 @@
 # Load required packages (if you dont have them use install.packag --------
 
-## Load required packages (if you dont have them use install.packages("nameofpackage") first
+## Load required packages (if you dont have them use install.packages("nameofpackage") first 
 library(haven)
 library(tidyverse)
 library(openxlsx)
@@ -26,15 +26,15 @@ codebook <- a %>%
 
 # Select and rename the key variables and values used for the analalysis --------
 
-#standardize names of key variables
+#standardize names of key variables using WFP VAM's Assesment Codebook
 data <- data  %>% select(ADMIN1Name = q11a_nom_region, #first adminstrative division
                                             ADMIN2Name = q12_nom_cercle, #second administrative division
-                                            HDDS = SDAM_ENSAN022018, #Household Dietary Diversity Score
-                                            FCSCat = FCClass, #Food Consumption Groups from the Food Consumption Score
-                                            HHS = HHSscore, #Household Hunger Score
-                                            rCSI = CSI_reduit, #reduced coping strategies
+                                            HDDScore = SDAM_ENSAN022018, #Household Dietary Diversity Score
+                                            FCSCat = FCClass, #Food Consumption Groups from the Food Consumption Score 21/35 - normal threshold
+                                            HHScore = HHSscore, #Household Hunger Score
+                                            rCSIScore = CSI_reduit, #reduced coping strategies
                                             LhHCSCat = max_coping_strat, #livelihood coping strategies
-                                            Weight = Weigth_new1, #survey weights - if none - delete this line
+                                            WeightHHS = Weigth_new1, #survey WeightHHSs - if none - delete this line
                                             choc_subi = q101a_chocs_subis_derniers6_mois #one example of contributing factor
                                             )
 
@@ -42,10 +42,10 @@ data <- data  %>% select(ADMIN1Name = q11a_nom_region, #first adminstrative divi
 # # standardize naming of categorical values -----------------------------
 
 #standardize naming of categorical values and also convert numeric values to Cadre Harmonise thresholds 
-data <- data %>%  mutate(FCG = case_when(
-  FCG == "Pauvre" ~ "Poor", 
-  FCG == "Limite" ~ "Borderline",       
-  FCG == "Acceptable" ~ "Acceptable"
+data <- data %>%  mutate(FCSCat = case_when(
+  FCSCat == "Pauvre" ~ "Poor", 
+  FCSCat == "Limite" ~ "Borderline",       
+  FCSCat == "Acceptable" ~ "Acceptable"
 ),
 LhHCSCat = case_when(
   LhHCSCat == "Pas de stratégies" ~ "NoStrategies", # Put accents to stratigies so that the code works properly
@@ -54,24 +54,24 @@ LhHCSCat = case_when(
   LhHCSCat == "Stratégies d'urgence" ~ "EmergencyStrategies"
 ),
 CH_HDDS = case_when(
-  HDDS >= 5 ~ "Phase1", 
-  HDDS == 4 ~ "Phase2",       
-  HDDS == 3 ~ "Phase3",
-  HDDS == 2 ~ "Phase4",
-  HDDS < 2 ~ "Phase5"
+  HDDScore >= 5 ~ "Phase1", 
+  HDDScore == 4 ~ "Phase2",       
+  HDDScore == 3 ~ "Phase3",
+  HDDScore == 2 ~ "Phase4",
+  HDDScore < 2 ~ "Phase5"
 ),
 CH_rCSI = case_when(
-  rCSI <= 3 ~ "Phase1", 
-  rCSI >= 4 & rCSI <= 18 ~ "Phase2",       
-  rCSI >= 19 ~ "Phase3"    
+  rCSIScore <= 3 ~ "Phase1", 
+  rCSIScore >= 4 & rCSIScore <= 18 ~ "Phase2",       
+  rCSIScore >= 19 ~ "Phase3"    
 ),
 CH_HHS =
   case_when(
-    HHS == 0 ~ "Phase1",
-    HHS == 1 ~ "Phase2",
-    HHS == 2 | HHS == 3 ~ "Phase3",
-    HHS == 4 ~ "Phase4",  
-    HHS >= 5 ~ "Phase5"
+    HHScore == 0 ~ "Phase1",
+    HHScore == 1 ~ "Phase2",
+    HHScore == 2 | HHScore == 3 ~ "Phase3",
+    HHScore == 4 ~ "Phase4",  
+    HHScore >= 5 ~ "Phase5"
   ))
 
 
@@ -83,7 +83,7 @@ CH_HHS =
 #Household Dietarty Diversity Score
 HDDStable <- data %>% 
   group_by(ADMIN1Name, ADMIN2Name) %>%
-  count(CH_HDDS,wt=Weight) %>%
+  count(CH_HDDS,wt=WeightHHS) %>%
   drop_na() %>%
   mutate(n = 100 * n / sum(n)) %>%
   ungroup() %>%
@@ -104,11 +104,11 @@ CH_HDDStable <- HDDStable %>% mutate(indicator = "HDDS",
 #Food Consumption Groups
 FCGtable <- data %>% 
   group_by(ADMIN1Name, ADMIN2Name) %>%
-  count(FCG,wt=Weight) %>%
+  count(FCSCat,wt=WeightHHS) %>%
   drop_na() %>%
   mutate(n = 100 * n / sum(n)) %>%
   ungroup() %>%
-  spread(key = FCG, value = n) %>% replace(., is.na(.), 0) %>% mutate_if(is.numeric, round, 1) 
+  spread(key = FCSCat, value = n) %>% replace(., is.na(.), 0) %>% mutate_if(is.numeric, round, 1) 
 #Apply the Cadre Harmonise rules for phasing the Food Consumption Groups 
 CH_FCGtable <-  FCGtable %>%  mutate(indicator = "FCG", PoorBorderline = Poor + Borderline, finalphase = case_when(
   Poor < 5 ~ 1,  #if less than 5% are in the poor food group then phase 1
@@ -121,7 +121,7 @@ CH_FCGtable <-  FCGtable %>%  mutate(indicator = "FCG", PoorBorderline = Poor + 
 #Household Hunger Score
 HHStable <- data %>% 
   group_by(ADMIN1Name, ADMIN2Name) %>%
-  count(CH_HHS,wt=Weight) %>%
+  count(CH_HHS,wt=WeightHHS) %>%
   drop_na() %>%
   mutate(n = 100 * n / sum(n)) %>%
   ungroup() %>%
@@ -141,7 +141,7 @@ CH_HHStable <- HHStable %>% mutate(indicator = "HHS", phase2345 = `Phase2` + `Ph
 #reduced consumption score
 rCSItable <- data %>% 
   group_by(ADMIN1Name, ADMIN2Name) %>%
-  count(CH_rCSI,wt=Weight) %>%
+  count(CH_rCSI,wt=WeightHHS) %>%
   drop_na() %>%
   mutate(n = 100 * n / sum(n)) %>%
   ungroup() %>%
@@ -160,7 +160,7 @@ CH_rCSItable <- rCSItable %>% mutate(indicator = "rCSI",
 #Livelihood Coping Strategies
 LhHCSCattable <- data %>% 
   group_by(ADMIN1Name, ADMIN2Name) %>%
-  count(LhHCSCat,wt=Weight) %>%
+  count(LhHCSCat,wt=WeightHHS) %>%
   drop_na() %>%
   mutate(n = 100 * n / sum(n)) %>%
   ungroup() %>%
@@ -290,5 +290,8 @@ matrice_intermediaire <- matrice_intermediaire %>%
 # saving final data as excel sheet ----------------------------------------
 
 write.xlsx(matrice_intermediaire,file = "Matrice_intermediaire.xlsx",sheetName = "Matrice intermidiaire",append = F)
+
+
+
 
 
