@@ -7,20 +7,28 @@ library(openxlsx)
 library(readxl)
 library(labelled)
 
-# Import data set and create codebook -------------------------------------
 
-#change directory to where your files are
-setwd("C:\\CHdataimprovement")
-#import SPSS data set
-data  <- read_sav("MLI_201909_ENSAN_external.sav")
-#change values to value labels 
-data<- to_factor(data)
-# create codebook so you can see variables and variable labels
-a <- var_label(data)
-codebook <- a %>% 
-  unlist(recursive = FALSE) %>% 
-  enframe() %>% 
-  unnest()
+#' Create a codebook
+#'
+#' @param data data.frame
+#' @return data.frame with two columns: (name, value)
+#' @examples \dontrun{
+#' library(labelled)
+#' library(haven)
+#' 
+#' codebook <- read_sav("MLI_201909_ENSAN_external.sav") %>%
+#'   to_factor() %>%
+#'   create_codebook()
+#' }
+#' @importFrom tidyverse %>%
+create_codebook <- function(data) {
+  var_label(data) %>%
+    unlist(recursive = FALSE) %>% 
+    enframe() %>% 
+    unnest()
+}
+
+
 
 
 
@@ -39,7 +47,7 @@ data <- data  %>% select(ADMIN1Name = q11a_nom_region, #first adminstrative divi
 )
 
 
-#Creat a table then a graph of Food Consumption Groups by Admin1 and Admin2 - this is too complicated
+#Create a table then a graph of Food Consumption Groups by Admin1 and Admin2 - this is too complicated
 FCGtable1 <- data %>%
   group_by(ADMIN1Name, ADMIN2Name) %>%
   count(FCSCat, wt = WeightHHS) %>%
