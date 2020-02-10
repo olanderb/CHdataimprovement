@@ -29,22 +29,30 @@ create_codebook <- function(data) {
 }
 
 
+#' Standardize names of key variables using WFP VAM's Assessment Codebook
+#' 
+#' @param data data.frame
+#' @return data.frame
+#' @examples \dontrun{
+#' codebook <- read_sav("MLI_201909_ENSAN_external.sav") %>%
+#'  standardize_names()
+#' }
+#' @importFrom tidyverse %>%
+standardize_names <- function(data) {
+  data %>% 
+    select(
+      ADMIN1Name = q11a_nom_region,  # First administrative division
+      ADMIN2Name = q12_nom_cercle,   # Second administrative division
+      HDDScore = SDAM_ENSAN022018,   # Household Dietary Diversity Score
+      FCSCat = FCClass,  # Food Consumption Groups from the Food Consumption Score 21/35 - normal threshold
+      HHScore = HHSscore,            # Household Hunger Score
+      rCSIScore = CSI_reduit,        # Reduced coping strategies
+      LhHCSCat = max_coping_strat,   # Livelihood coping strategies
+      WeightHHS = Weigth_new1,       # Survey WeightHHSs - if none - delete this line
+      choc_subi = q101a_chocs_subis_derniers6_mois  # One example of contributing factor
+  )
+}
 
-
-
-# Select and rename the key variables and values used for the analalysis --------
-
-#standardize names of key variables using WFP VAM's Assesment Codebook
-data <- data  %>% select(ADMIN1Name = q11a_nom_region, #first adminstrative division
-                         ADMIN2Name = q12_nom_cercle, #second administrative division
-                         HDDScore = SDAM_ENSAN022018, #Household Dietary Diversity Score
-                         FCSCat = FCClass, #Food Consumption Groups from the Food Consumption Score 21/35 - normal threshold
-                         HHScore = HHSscore, #Household Hunger Score
-                         rCSIScore = CSI_reduit, #reduced coping strategies
-                         LhHCSCat = max_coping_strat, #livelihood coping strategies
-                         WeightHHS = Weigth_new1, #survey WeightHHSs - if none - delete this line
-                         choc_subi = q101a_chocs_subis_derniers6_mois #one example of contributing factor
-)
 
 
 #Create a table then a graph of Food Consumption Groups by Admin1 and Admin2 - this is too complicated
